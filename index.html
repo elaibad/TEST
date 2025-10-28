@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ачивкар — Life Tracker (PRO)</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<!-- FullCalendar (CDN) -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<meta name="theme-color" content="#06b6d4">
+
+<style>
+/* ------------------------------
+   UI: light playful theme
+   ------------------------------ */
+:root{
+  --bg:#f6fbfb;
+  --card:#ffffff;
+  --muted:#6b7280;
+  --text:#0b1220;
+  --accent:#06b6d4;
+  --accent2:#34d399;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  --glass:rgba(2,6,23,0.04);
+  --radius:12px;
+  --shadow:0 12px 30px rgba(2,6,23,0.06);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color:var(--text);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:linear-gradient(180deg,#f0fdff 0%, var(--bg) 70%);
+  display:flex;justify-content:center;padding:18px;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+
+/* layout */
+.wrap{width:100%;max-width:1200px}
+.header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.logo{width:64px;height:64px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:var(--shadow)}
+.title{font-size:18px;margin:0}
+.lead{font-size:13px;color:var(--muted);margin:0}
+
+/* main grid */
+.main{display:grid;grid-template-columns: 1fr 420px;gap:14px}
+@media (max-width:980px){ .main{grid-template-columns:1fr} }
+
+/* panels */
+.card{background:var(--card);border-radius:12px;padding:12px;box-shadow:var(--shadow);border:1px solid rgba(2,6,23,0.03)}
+.h3{font-size:15px;margin:0 0 8px 0}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* calendar container */
+#calendarRoot{min-height:420px}
+.fc-toolbar-title{font-weight:800}
+
+/* tabs */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tab{padding:8px 12px;border-radius:999px;background:rgba(2,6,23,0.03);font-weight:600;color:var(--muted);cursor:pointer}
+.tab.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;box-shadow:0 8px 24px rgba(6,22,34,0.08)}
+
+/* forms & lists */
+.form{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px}
+.col{flex:1}
+.input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:transparent;font:inherit}
+textarea{min-height:96px;resize:vertical}
+.btn{padding:8px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid rgba(2,6,23,0.06);color:var(--muted)}
+.small{font-size:13px;color:var(--muted);}
+.list{display:flex;flex-direction:column;gap:8px;max-height:36vh;overflow:auto;padding-right:6px}
+.item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:linear-gradient(180deg,#fff,#f8feff);border:1px solid rgba(2,6,23,0.04)}
+.meta{display:flex;flex-direction:column}
+
+/* right side */
+.side{display:flex;flex-direction:column;gap:12px}
+.stat{display:flex;justify-content:space-between;align-items:center}
+.big{font-weight:800;font-size:20px}
+
+/* modal */
+.modal{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.35);z-index:9999}
+.modal .panel{width:94%;max-width:900px;max-height:86vh;overflow:auto;border-radius:12px}
+
+/* diary */
+.diary{min-height:140px;border-radius:8px;border:1px dashed rgba(2,6,23,0.06);padding:8px;background:linear-gradient(180deg,#fff,#fbfeff)}
+
+/* helpers */
+.badge{padding:6px 10px;border-radius:999px;background:linear-gradient(90deg,#fff,#f0fdf4);border:1px solid rgba(2,6,23,0.04);font-weight:700}
+.kv{display:flex;justify-content:space-between;gap:8px}
+.footer{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="logo">ACHV</div>
+      <div>
+        <h1 class="title">Ачивкар — Life Tracker (PRO)</h1>
+        <div class="lead">Календарь, деньги, образование, дневник и ачивки — всё в одном файле.</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+        <div class="small">Записей: <strong id="totalCount">0</strong></div>
+        <div class="small">Очки: <strong id="pointsTotal">0</strong></div>
+      </div>
+    </header>
+
+    <div class="main">
+      <!-- left: calendar and tabs -->
+      <div>
+        <!-- calendar card -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="small">Календарь</div>
+              <div style="font-weight:800" id="calendarTitle">Месяц</div>
+            </div>
+            <div class="controls">
+              <button class="btn ghost" id="todayBtn">Сегодня</button>
+              <button class="btn ghost" id="prevBtn">◀</button>
+              <button class="btn ghost" id="nextBtn">▶</button>
+              <select id="filterSelect" class="input" style="width:160px">
+                <option value="">Фильтр: все вкладки</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="calendarRoot" style="margin-top:12px"></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+            <div class="small">Нажми на день — откроется карточка дня. Долгое нажатие / правый клик — быстрый шаблон.</div>
+            <div class="small">Копирование дня: открой карточку дня → Копировать.</div>
+          </div>
+        </div>
+
+        <!-- tabs + content -->
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h3 class="h3">Вкладки</h3>
+              <div class="small">Выбери раздел и добавляй записи на выбранную дату.</div>
+            </div>
+            <div class="controls">
+              <button class="btn ghost" id="manageTabsBtn">Управление</button>
+              <button class="btn ghost" id="moneyBtn">Деньги</button>
+              <button class="btn" id="diaryBtn">Дневник</button>
+            </div>
+          </div>
+
+          <div class="tabs" id="tabsRow" style="margin-top:10px"></div>
+
+          <div id="tabContent" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- right: stats & money preview -->
+      <aside>
+        <div class="card side">
+          <div>
+            <div class="small">Очки</div>
+            <div class="big" id="sidebarPoints">0</div>
+          </div>
+          <div>
+            <div class="small">Стрик</div>
+            <div class="big" id="sidebarStreak">0</div>
+          </div>
+          <div>
+            <div class="small">Бейджи</div>
+            <div id="badgesRow" class="badges" style="margin-top:8px"></div>
+          </div>
+
+          <div>
+            <div class="small">Деньги — кратко</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+              <div style="flex:1">
+                <div class="small">Баланс</div>
+                <div style="font-weight:800" id="miniBalance">0</div>
+              </div>
+              <div style="width:120px">
+                <div class="small">Цель</div>
+                <div id="miniGoal" style="font-weight:800">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="small">График доходов (текущий месяц)</div>
+            <div style="margin-top:8px;padding:8px;background:linear-gradient(180deg,#fff,#fcfeff);border-radius:8px;border:1px solid rgba(2,6,23,0.03)">
+              <canvas id="chartIncome" width="320" height="130"></canvas>
+            </div>
+          </div>
+
+          <div>
+            <div class="small">Экспорт / импорт</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" id="exportBtn">Экспорт</button>
+              <button class="btn ghost" id="importBtn">Импорт</button>
+              <input type="file" id="fileInput" accept="application/json" style="display:none" />
+            </div>
+            <div class="small" style="margin-top:8px">Экспорт скачает JSON, импорт перезапишет данные.</div>
+          </div>
+
+          <div>
+            <div style="display:flex;gap:8px">
+              <button class="btn ghost" id="undoBtn">Отменить</button>
+              <button class="btn ghost" id="resetBtn">Сбросить всё</button>
+            </div>
+            <div class="small" style="margin-top:8px" id="historyInfo">История: 0</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">Файлы и данные хранятся локально (localStorage). Для синхронизации можно включить GitHub Gist или Firebase — сделаю на следующем шаге.</div>
+  </div>
+
+  <!-- Day modal -->
+  <div id="dayModal" class="modal" aria-hidden="true">
+    <div class="card panel" style="width:96%;max-width:900px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Карточка дня</div>
+          <div style="font-weight:800" id="dayModalDate">Дата</div>
+          <div class="small" id="dayModalSummary">Краткая сводка...</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="copyDayBtn">Копировать день</button>
+          <button class="btn ghost" id="closeDayBtn">Закрыть</button>
+        </div>
+      </div>
+
+      <hr style="margin:10px 0;border:none;border-top:1px solid rgba(2,6,23,0.04)">
+
+      <div id="dayModalContent"></div>
+    </div>
+  </div>
+
+  <!-- Copy modal -->
+  <div id="copyModal" class="modal" aria-hidden="true">
+    <div class="card panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Копирование дня</div>
+          <div style="font-weight:800" id="copyFrom">Откуда</div>
+        </div>
+        <div>
+          <button class="btn ghost" id="closeCopy">Отмена</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="small">Копировать в дату</div>
+        <input id="copyTo" type="date" class="input" />
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="small">Режим</div>
+        <select id="copyMode" class="input">
+          <option value="merge">Merge (добавить)</option>
+          <option value="replace">Replace (заменить)</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" id="doCopy">Копировать</button>
+        <button class="btn ghost" id="cancelCopy">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Money modal -->
+  <div id="moneyModal" class="modal" aria-hidden="true">
+    <div class="card panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Money — финансы</div>
+          <div style="font-weight:800" id="moneyTitle">Баланс</div>
+        </div>
+        <div>
+          <button class="btn ghost" id="closeMoneyBtn">Закрыть</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div>
+          <div class="small">Цель</div>
+          <input id="moneyGoal" class="input" placeholder="Целевая сумма" />
+        </div>
+        <div>
+          <div class="small">Имеющиеся средства</div>
+          <input id="moneyCurrent" class="input" placeholder="Сейчас" />
+        </div>
+        <div>
+          <div class="small">Инвестиции</div>
+          <input id="moneyInvest" class="input" placeholder="Инвестиции" />
+        </div>
+        <div>
+          <div class="small">Сбережения</div>
+          <input id="moneySave" class="input" placeholder="Сбережения" />
+        </div>
+      </div>
+
+      <hr style="margin:10px 0;border:none;border-top:1px solid rgba(2,6,23,0.04)">
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="transType" class="input" style="width:140px">
+          <option value="income">Доход</option>
+          <option value="expense">Расход</option>
+        </select>
+        <input id="transAmount" class="input" placeholder="Сумма" style="width:140px" />
+        <input id="transDate" type="date" class="input" style="width:160px" />
+        <input id="transNote" class="input" placeholder="Комментарий" style="flex:1" />
+        <button class="btn" id="addTransBtn">Добавить</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="small">Транзакции (последние)</div>
+        <div id="transList" style="margin-top:8px;max-height:220px;overflow:auto"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="small">Статистика</div>
+        <div id="moneyStats" class="small" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diary modal -->
+  <div id="diaryModal" class="modal" aria-hidden="true">
+    <div class="card panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Дневник</div>
+          <div style="font-weight:800" id="diaryDate">Дата</div>
+        </div>
+        <div>
+          <button class="btn ghost" id="closeDiaryBtn">Закрыть</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <textarea id="diaryText" class="input diary" placeholder="Пиши здесь..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="saveDiary">Сохранить</button>
+          <button class="btn ghost" id="clearDiary">Очистить</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="small">Последние записи</div>
+        <div id="diaryList" style="margin-top:8px;max-height:220px;overflow:auto"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Single-file PRO app
+  - Uses FullCalendar to render calendar & date selection
+  - Chart.js for graphs
+  - LocalStorage persistence
+  - Tabs: personal, health, finance (income/day & expense/day), relations, work, education, goals
+  - Education: books (pages), courses (sections), articles (count)
+  - Money module with transactions, stats, autop-sums and manual edits
+  - Day modal with summary and copy-day
+  - Copy day (merge/replace)
+  - Diary per date
+  - Export/Import JSON, Undo (history)
+*/
+
+// ---------- Constants ----------
+const LS_KEY = 'achv_pro_v1';
+const LS_HISTORY = 'achv_pro_history_v1';
+
+const DEFAULT_TABS = [
+  { id:'personal', title:'Личное развитие', color:'#06b6d4', fields:[
+      {id:'minutes', type:'number', label:'Мин занятия'},
+      {id:'mood', type:'select', label:'Настроение', options:['😐','🙂','😀','🔥']}
+  ]},
+  { id:'health', title:'Здоровье', color:'#ef4444', fields:[
+      {id:'sleep', type:'number', label:'Часы сна'},
+      {id:'workout', type:'checkbox', label:'Тренировка'},
+      {id:'water', type:'number', label:'Стаканов воды'}
+  ]},
+  { id:'finance', title:'Финансы', color:'#34d399', fields:[
+      {id:'income_day', type:'number', label:'Доходы за день'},
+      {id:'expense_day', type:'number', label:'Расходы за день'}
+  ]},
+  { id:'relations', title:'Отношения', color:'#f59e0b', fields:[
+      {id:'contact', type:'text', label:'Контакт'},
+      {id:'quality', type:'select', label:'Качество', options:['Нейтрально','Тепло','Конфликтно']}
+  ]},
+  { id:'work', title:'Работа', color:'#7c3aed', fields:[
+      {id:'task', type:'text', label:'Задача'},
+      {id:'hours', type:'number', label:'Часы'}
+  ]},
+  { id:'education', title:'Образование', color:'#0ea5e9', fields:[]}, // handled specially
+  { id:'goals', title:'Цели', color:'#ec4899', fields:[
+      {id:'goal', type:'text', label:'Цель'},
+      {id:'progress', type:'number', label:'Прогресс %'}
+  ]}
+];
+
+const BADGE_RULES = [
+  {id:'newbie', title:'Новичок', need:20},
+  {id:'regular', title:'Регуляр', need:100},
+  {id:'pro', title:'Про', need:400},
+  {id:'streak7', title:'Стрик 7', kind:'streak', need:7}
+];
+
+// ---------- State ----------
+let state = {
+  tabs: JSON.parse(JSON.stringify(DEFAULT_TABS)),
+  items: [], // {id, tabId, date(YYYY-MM-DD), title, pts, done, data:{}, created}
+  diary: {}, // date->text
+  money: { goal:0, current:0, invest:0, save:0, transactions: [] }, // transactions: {id,date,type,amount,note}
+  badges: [],
+  points: 0,
+  history: []
+};
+
+let calendar = null;
+let activeTab = state.tabs[0].id;
+let selectedDate = (new Date()).toISOString().slice(0,10);
+let copySource = null;
+
+// ---------- Utils ----------
+const uid = ()=> 'id_' + Math.random().toString(36).slice(2,9);
+const todayISO = (d=new Date()) => d.toISOString().slice(0,10);
+function el(id){ return document.getElementById(id); }
+function safeParse(s, fallback){ try{ return JSON.parse(s);}catch(e){ return fallback; } }
+function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
+
+// ---------- Persistence ----------
+function loadState(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(raw){
+    const parsed = safeParse(raw, null);
+    if(parsed){
+      state = Object.assign({}, state, parsed);
+      if(!state.tabs || state.tabs.length===0) state.tabs = JSON.parse(JSON.stringify(DEFAULT_TABS));
+      if(!Array.isArray(state.items)) state.items = [];
+      if(!state.money) state.money = {goal:0,current:0,invest:0,save:0,transactions:[]};
+      if(!state.history) state.history = [];
+    }
+  } else {
+    saveState(false,'init');
+  }
+}
+function saveState(pushHistory=true, note='save'){
+  if(pushHistory){
+    const snap = {
+      t:new Date().toISOString(),
+      note,
+      snapshot: JSON.stringify({
+        tabs: state.tabs, items: state.items, diary: state.diary, money: state.money, badges: state.badges, points: state.points
+      })
+    };
+    state.history = state.history || [];
+    state.history.unshift(snap);
+    if(state.history.length>80) state.history.length = 80;
+  }
+  recalcPointsBadges();
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){ console.error('save error', e); }
+  renderAll();
+}
+
+// ---------- Export/Import ----------
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `achv_export_${todayISO()}.json`; a.click();
+  URL.revokeObjectURL(url);
+}
+function importJSONFile(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data) return alert('Неверный файл');
+      if(!confirm('Импорт перезапишет текущие данные. Продолжить?')) return;
+      state = data;
+      if(!state.tabs || state.tabs.length===0) state.tabs = JSON.parse(JSON.stringify(DEFAULT_TABS));
+      if(!state.money) state.money = {goal:0,current:0,invest:0,save:0,transactions:[]};
+      saveState(false,'import');
+      alert('Импорт выполнен');
+    }catch(er){ alert('Ошибка импорта: '+er.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ---------- CRUD records ----------
+function addRecord({tabId, date, title, pts=0, done=false, data={}}){
+  const rec = { id: uid(), tabId, date, title, pts: Number(pts)||0, done: !!done, data: data||{}, created: new Date().toISOString() };
+  state.items.push(rec);
+  saveState(true,'add');
+  return rec;
+}
+function removeRecord(id){ const i = state.items.findIndex(x=>x.id===id); if(i>=0){ state.items.splice(i,1); saveState(true,'remove'); } }
+function toggleDone(id){ const it = state.items.find(x=>x.id===id); if(it){ it.done = !it.done; saveState(true,'toggle'); } }
+function updateRecord(id, patch){ const it = state.items.find(x=>x.id===id); if(it){ Object.assign(it, patch); saveState(true,'update'); } }
+
+// ---------- Diary ----------
+function saveDiary(date, text){ if(text && text.trim()!=='') state.diary[date]=text.trim(); else delete state.diary[date]; saveState(true,'diary'); }
+function getDiary(date){ return state.diary[date] || ''; }
+
+// ---------- Money ----------
+function addTransaction({date, type, amount, note=''}){
+  state.money.transactions = state.money.transactions || [];
+  const t = { id: uid(), date, type, amount: Number(amount)||0, note, created: new Date().toISOString() };
+  state.money.transactions.unshift(t);
+  // auto-adjust current
+  if(type==='income') state.money.current = Number(state.money.current || 0) + Number(amount || 0);
+  if(type==='expense') state.money.current = Number(state.money.current || 0) - Number(amount || 0);
+  saveState(true,'trans');
+  return t;
+}
+function removeTransaction(id){ state.money.transactions = state.money.transactions.filter(t=>t.id!==id); saveState(true,'remove-trans'); }
+function editTransaction(id, patch){ const t = state.money.transactions.find(x=>x.id===id); if(t){ Object.assign(t, patch); saveState(true,'edit-trans'); } }
+function getMoneySummary(from, to){
+  from = from || todayISO(); to = to || from;
+  const tr = (state.money.transactions || []).filter(t => t.date >= from && t.date <= to);
+  const income = tr.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = tr.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  return { income, expense, balance: income - expense };
+}
+function weekStart(dateStr){ const d=new Date(dateStr); const day=d.getDay(); const delta = (day===0? -6 : 1-day); d.setDate(d.getDate()+delta); return todayISO(d); }
+
+// ---------- Points & Badges ----------
+function recalcPointsBadges(){
+  state.points = state.items.filter(x=>x.done).reduce((s,i)=>s + (Number(i.pts)||0),0);
+  const earned = new Set(state.badges || []);
+  for(const b of BADGE_RULES.filter(x=>!x.kind)){
+    if(state.points >= b.need) earned.add(b.id); else earned.delete(b.id);
+  }
+  // streak
+  const doneDates = new Set(state.items.filter(i=>i.done).map(i=>i.date));
+  let streak = 0; let d = new Date();
+  while(true){ const iso=todayISO(d); if(doneDates.has(iso)){ streak++; d.setDate(d.getDate()-1);} else break; }
+  if(streak>=7) earned.add('streak7'); else earned.delete('streak7');
+  state.badges = Array.from(earned);
+  state.streak = streak;
+}
+
+// ---------- Calendar init ----------
+function initCalendar(){
+  const calendarEl = document.createElement('div');
+  calendarEl.id = 'fc';
+  el('calendarRoot').appendChild(calendarEl);
+  const calendarObj = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: '',
+      center: 'title',
+      right: ''
+    },
+    height: 'auto',
+    dateClick: function(info){
+      openDayModal(info.dateStr);
+    },
+    eventClick: function(info){
+      // open day modal for event date
+      openDayModal(info.event.startStr.slice(0,10));
+    },
+    dayMaxEventRows: 3,
+    events: function(fetchInfo, successCallback, failureCallback){
+      // create events from state.items (only done items or all? show visible markers)
+      const filter = el('filterSelect').value || '';
+      const events = [];
+      for(const it of state.items){
+        if(filter && it.tabId !== filter) continue;
+        // create an event point if done (or show all as small dots)
+        events.push({
+          id: it.id,
+          title: it.title.length>30? it.title.slice(0,30)+'…': it.title,
+          start: it.date,
+          allDay: true,
+          backgroundColor: getTabColor(it.tabId),
+          borderColor: getTabColor(it.tabId),
+          textColor: '#04203a'
+        });
+      }
+      successCallback(events);
+    },
+    dayCellDidMount: function(arg){
+      // we will display money small summary + diary dot if exists
+      // FullCalendar doesn't allow much change here, so do nothing here
+    }
+  });
+  calendar = calendarObj;
+  calendar.render();
+  // update title manually
+  calendar.on('datesSet', () => {
+    el('calendarTitle').textContent = calendar.view.title;
+    renderIncomeChart(); // update chart when month changed
+  });
+}
+
+// ---------- Helpers ----------
+function getTabColor(tabId){
+  const t = state.tabs.find(x=>x.id===tabId);
+  return t ? t.color : '#06b6d4';
+}
+
+// ---------- Render UI ----------
+function renderTabs(){
+  const row = el('tabsRow'); row.innerHTML = '';
+  for(const t of state.tabs){
+    const b = document.createElement('div'); b.className = 'tab' + (t.id===activeTab?' active':''); b.textContent = t.title;
+    b.style.border = `1px solid ${t.color || 'rgba(2,6,23,0.06)'}`;
+    b.onclick = ()=> { activeTab = t.id; renderTabContent(); renderCalendarEvents(); };
+    row.appendChild(b);
+  }
+  fillFilter();
+}
+function fillFilter(){
+  const sel = el('filterSelect'); sel.innerHTML = '<option value="">Фильтр: все вкладки</option>';
+  for(const t of state.tabs){ const o = document.createElement('option'); o.value = t.id; o.textContent = t.title; sel.appendChild(o); }
+  sel.onchange = ()=> renderCalendarEvents();
+}
+
+function renderTabContent(){
+  const container = el('tabContent'); container.innerHTML = '';
+  const tab = state.tabs.find(x=>x.id===activeTab);
+  if(!tab) return;
+  // Education special handling
+  if(tab.id === 'education'){
+    const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between';
+    header.innerHTML = `<div style="font-weight:800">${tab.title}</div><div class="small">Дата: <strong>${selectedDate}</strong></div>`;
+    container.appendChild(header);
+
+    // Books
+    const booksBlock = document.createElement('div'); booksBlock.className='card'; booksBlock.style.marginTop='10px';
+    booksBlock.innerHTML = `<div style="font-weight:700">Книги</div><div class="small">Фиксируй прочитанные страницы</div>`;
+    const booksForm = document.createElement('div'); booksForm.className='form'; booksForm.style.marginTop='8px';
+    const bTitle = document.createElement('input'); bTitle.className='input'; bTitle.placeholder='Название книги';
+    const bPagesRead = document.createElement('input'); bPagesRead.className='input'; bPagesRead.type='number'; bPagesRead.placeholder='Прочитано страниц';
+    const bPagesTotal = document.createElement('input'); bPagesTotal.className='input'; bPagesTotal.type='number'; bPagesTotal.placeholder='Всего страниц (опц.)';
+    const addBook = document.createElement('button'); addBook.className='btn'; addBook.textContent='Добавить книгу';
+    addBook.onclick = ()=>{
+      const title = bTitle.value.trim() || 'Книга';
+      const read = Number(bPagesRead.value)||0; const total = Number(bPagesTotal.value)||0;
+      addRecord({tabId:'education', date:selectedDate, title:`Книга: ${title}`, pts:0, done:true, data:{kind:'book', read, total}});
+      bTitle.value=''; bPagesRead.value=''; bPagesTotal.value='';
+      renderAll();
+    };
+    booksForm.appendChild(bTitle); booksForm.appendChild(bPagesRead); booksForm.appendChild(bPagesTotal); booksForm.appendChild(addBook);
+    booksBlock.appendChild(booksForm);
+    container.appendChild(booksBlock);
+
+    // Courses
+    const coursesBlock = document.createElement('div'); coursesBlock.className='card'; coursesBlock.style.marginTop='10px';
+    coursesBlock.innerHTML = `<div style="font-weight:700">Курсы</div><div class="small">Фиксируй изученные разделы</div>`;
+    const coursesForm = document.createElement('div'); coursesForm.className='form'; coursesForm.style.marginTop='8px';
+    const cTitle = document.createElement('input'); cTitle.className='input'; cTitle.placeholder='Название курса';
+    const cParts = document.createElement('input'); cParts.className='input'; cParts.type='number'; cParts.placeholder='Количество разделов';
+    const addCourse = document.createElement('button'); addCourse.className='btn'; addCourse.textContent='Добавить курс';
+    addCourse.onclick = ()=>{ const title=cTitle.value.trim()||'Курс'; const parts=Number(cParts.value)||0; addRecord({tabId:'education', date:selectedDate, title:`Курс: ${title}`, pts:0, done:true, data:{kind:'course', parts}}); cTitle.value=''; cParts.value=''; renderAll(); };
+    coursesForm.appendChild(cTitle); coursesForm.appendChild(cParts); coursesForm.appendChild(addCourse);
+    coursesBlock.appendChild(coursesForm); container.appendChild(coursesBlock);
+
+    // Articles
+    const articlesBlock = document.createElement('div'); articlesBlock.className='card'; articlesBlock.style.marginTop='10px';
+    articlesBlock.innerHTML = `<div style="font-weight:700">Статьи</div><div class="small">Прочитал статьи — зафиксируй</div>`;
+    const articlesForm = document.createElement('div'); articlesForm.className='form';
+    const aTitle = document.createElement('input'); aTitle.className='input'; aTitle.placeholder='Тема/источник статьи';
+    const aCount = document.createElement('input'); aCount.className='input'; aCount.type='number'; aCount.placeholder='Количество статей';
+    const addArticles = document.createElement('button'); addArticles.className='btn'; addArticles.textContent='Добавить статьи';
+    addArticles.onclick = ()=>{ const title=aTitle.value.trim()||'Статьи'; const cnt=Number(aCount.value)||0; addRecord({tabId:'education', date:selectedDate, title:`Статьи: ${title}`, pts:0, done:true, data:{kind:'article', cnt}}); aTitle.value=''; aCount.value=''; renderAll(); };
+    articlesForm.appendChild(aTitle); articlesForm.appendChild(aCount); articlesForm.appendChild(addArticles);
+    articlesBlock.appendChild(articlesForm); container.appendChild(articlesBlock);
+
+    // list today's education items
+    const edListTitle = document.createElement('div'); edListTitle.className='small'; edListTitle.style.marginTop='12px'; edListTitle.textContent = `Образование на ${selectedDate}`;
+    container.appendChild(edListTitle);
+    const edList = document.createElement('div'); edList.className='list';
+    const edItems = state.items.filter(i=>i.tabId==='education' && i.date===selectedDate);
+    if(edItems.length===0) edList.innerHTML = '<div class="small">Пусто</div>';
+    for(const it of edItems){
+      const row = document.createElement('div'); row.className='item';
+      const meta = document.createElement('div'); meta.className='meta'; meta.innerHTML = `<div style="font-weight:700">${escapeHtml(it.title)} ${it.done?'<span class="small" style="color:green">· выполнено</span>':''}</div><div class="small">${Object.entries(it.data||{}).map(([k,v])=> v!==''?`${k}: ${v}`:'').filter(Boolean).join(' · ')}</div>`;
+      const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px';
+      const del = document.createElement('button'); del.className='btn ghost'; del.textContent='Удалить'; del.onclick = ()=> { if(confirm('Удалить?')) removeRecord(it.id); };
+      controls.appendChild(del); row.appendChild(meta); row.appendChild(controls); edList.appendChild(row);
+    }
+    container.appendChild(edList);
+    return;
+  }
+
+  // normal tab (generic)
+  const titleRow = document.createElement('div'); titleRow.style.display='flex'; titleRow.style.justifyContent='space-between'; titleRow.style.alignItems='center';
+  titleRow.innerHTML = `<div style="font-weight:800">${tab.title}</div><div class="small">Дата: <strong>${selectedDate}</strong></div>`;
+  container.appendChild(titleRow);
+
+  const form = document.createElement('div'); form.className='form';
+  const tInput = document.createElement('input'); tInput.className='input'; tInput.placeholder='Короткое название (например Пробежка)';
+  const row = document.createElement('div'); row.className='row';
+  const pts = document.createElement('input'); pts.className='input'; pts.type='number'; pts.placeholder='Очки';
+  pts.value = 10;
+  const date = document.createElement('input'); date.className='input'; date.type='date'; date.value = selectedDate;
+  row.appendChild(pts); row.appendChild(date);
+  form.appendChild(tInput); form.appendChild(row);
+
+  // fields
+  for(const f of tab.fields || []){
+    if(f.type === 'checkbox'){
+      const lab = document.createElement('label'); lab.style.display='flex'; lab.style.alignItems='center'; lab.style.gap='8px';
+      const cb = document.createElement('input'); cb.type='checkbox';
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(f.label)); lab.dataset.field=f.id; form.appendChild(lab);
+    } else if(f.type === 'select'){
+      const sel = document.createElement('select'); sel.className='input'; sel.dataset.field=f.id;
+      for(const opt of f.options) { const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o); }
+      form.appendChild(sel);
+    } else {
+      const inp = document.createElement('input'); inp.className='input'; inp.type=f.type||'text'; inp.placeholder = f.label; inp.dataset.field=f.id; form.appendChild(inp);
+    }
+  }
+  const actions = document.createElement('div'); actions.className='controls';
+  const addBtn = document.createElement('button'); addBtn.className='btn'; addBtn.textContent='Добавить';
+  const addDoneBtn = document.createElement('button'); addDoneBtn.className='btn ghost'; addDoneBtn.textContent='Добавить и отметить';
+  addBtn.onclick = ()=>{
+    const title = tInput.value.trim() || tab.title;
+    const ptsVal = Number(pts.value)||0;
+    const dateVal = date.value || selectedDate;
+    const data = {};
+    for(const f of tab.fields || []){
+      const elF = form.querySelector(`[data-field="${f.id}"]`);
+      if(!elF) continue;
+      if(f.type==='checkbox') data[f.id]= elF.querySelector('input')? elF.querySelector('input').checked : false;
+      else data[f.id]= elF.value || '';
+    }
+    addRecord({tabId:tab.id, date:dateVal, title, pts:ptsVal, done:false, data});
+    tInput.value=''; pts.value=10;
+  };
+  addDoneBtn.onclick = ()=>{
+    const title = tInput.value.trim() || tab.title;
+    const ptsVal = Number(pts.value)||0;
+    const dateVal = date.value || selectedDate;
+    const data = {};
+    for(const f of tab.fields || []){
+      const elF = form.querySelector(`[data-field="${f.id}"]`);
+      if(!elF) continue;
+      if(f.type==='checkbox') data[f.id]= elF.querySelector('input')? elF.querySelector('input').checked : false;
+      else data[f.id]= elF.value || '';
+    }
+    addRecord({tabId:tab.id, date:dateVal, title, pts:ptsVal, done:true, data});
+    tInput.value=''; pts.value=10;
+  };
+  actions.appendChild(addBtn); actions.appendChild(addDoneBtn); form.appendChild(actions);
+  container.appendChild(form);
+
+  // list today's records for tab
+  const listTitle = document.createElement('div'); listTitle.className='small'; listTitle.style.marginTop='12px'; listTitle.textContent = `Записи ${tab.title} на ${selectedDate}`;
+  container.appendChild(listTitle);
+  const list = document.createElement('div'); list.className='list';
+  const items = state.items.filter(i=>i.tabId===tab.id && i.date===selectedDate).sort((a,b)=>b.created.localeCompare(a.created));
+  if(items.length===0) list.innerHTML = '<div class="small">Пусто</div>';
+  for(const it of items){
+    const row = document.createElement('div'); row.className='item';
+    const meta = document.createElement('div'); meta.className='meta'; meta.innerHTML = `<div style="font-weight:700">${escapeHtml(it.title)} ${it.done?'<span class="small" style="color:green">· выполнено</span>':''}</div><div class="small">${Object.entries(it.data||{}).map(([k,v])=> v!==''?`${k}: ${v}`:'').filter(Boolean).join(' · ')}</div>`;
+    const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px';
+    const ptsBadge = document.createElement('div'); ptsBadge.className='badge'; ptsBadge.textContent = `${it.pts || 0} pt`;
+    const toggle = document.createElement('button'); toggle.className='btn ghost'; toggle.textContent = it.done ? 'Снять' : 'Отметить'; toggle.onclick = ()=> toggleDone(it.id);
+    const edit = document.createElement('button'); edit.className='btn ghost'; edit.textContent='Ред'; edit.onclick = ()=> editRecordPrompt(it.id);
+    const del = document.createElement('button'); del.className='btn ghost'; del.textContent='Удалить'; del.onclick = ()=> { if(confirm('Удалить?')) removeRecord(it.id); };
+    controls.appendChild(ptsBadge); controls.appendChild(toggle); controls.appendChild(edit); controls.appendChild(del);
+    row.appendChild(meta); row.appendChild(controls); list.appendChild(row);
+  }
+  container.appendChild(list);
+}
+
+// ---------- Day modal ----------
+function openDayModal(date){
+  selectedDate = date;
+  el('dayModal').style.display='flex'; el('dayModal').setAttribute('aria-hidden','false');
+  el('dayModalDate').textContent = date;
+  // summary
+  const perTab = {};
+  for(const t of state.tabs) perTab[t.id] = {count:0, pts:0};
+  for(const it of state.items.filter(i=>i.date===date)){ perTab[it.tabId].count++; perTab[it.tabId].pts += Number(it.pts)||0; }
+  let summary = '';
+  for(const t of state.tabs){ if(perTab[t.id].count>0) summary += `${t.title}: ${perTab[t.id].count} / ${perTab[t.id].pts}пт · `; }
+  const m = getMoneySummary(date,date);
+  if(m.income||m.expense) summary += `Деньги: +${m.income} / -${m.expense} · `;
+  const d = getDiary(date);
+  if(d) summary += `Дневник: ${d.slice(0,80)}${d.length>80?'…':''}`;
+  if(!summary) summary = 'Пусто';
+  el('dayModalSummary').textContent = summary;
+
+  // content
+  const cont = el('dayModalContent'); cont.innerHTML = '';
+  for(const t of state.tabs){
+    const items = state.items.filter(i=>i.date===date && i.tabId===t.id);
+    if(items.length===0) continue;
+    const section = document.createElement('div'); section.style.marginBottom='10px';
+    section.innerHTML = `<div style="font-weight:800">${t.title} (${items.length})</div>`;
+    const list = document.createElement('div'); list.style.marginTop='6px';
+    for(const it of items){
+      const row=document.createElement('div'); row.className='item';
+      const meta=document.createElement('div'); meta.className='meta'; meta.innerHTML = `<div style="font-weight:700">${escapeHtml(it.title)} ${it.done?'<span class="small" style="color:green">· выполнено</span>':''}</div><div class="small">${Object.entries(it.data||{}).map(([k,v])=> v!==''?`${k}: ${v}`:'').filter(Boolean).join(' · ')}</div>`;
+      const controls=document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px';
+      const p = document.createElement('div'); p.className='badge'; p.textContent = `${it.pts || 0} pt`;
+      const toggle=document.createElement('button'); toggle.className='btn ghost'; toggle.textContent = it.done ? 'Снять' : 'Отметить'; toggle.onclick = ()=> toggleDone(it.id);
+      const edit=document.createElement('button'); edit.className='btn ghost'; edit.textContent='Ред'; edit.onclick = ()=> editRecordPrompt(it.id);
+      const del=document.createElement('button'); del.className='btn ghost'; del.textContent='Удалить'; del.onclick = ()=> { if(confirm('Удалить?')) removeRecord(it.id); };
+      controls.appendChild(p); controls.appendChild(toggle); controls.appendChild(edit); controls.appendChild(del);
+      row.appendChild(meta); row.appendChild(controls); list.appendChild(row);
+    }
+    section.appendChild(list); cont.appendChild(section);
+  }
+
+  // money
+  const moneySection = document.createElement('div'); moneySection.style.marginTop='8px';
+  const mm = getMoneySummary(date,date);
+  moneySection.innerHTML = `<div style="font-weight:800">Деньги</div><div class="small">+${mm.income} / -${mm.expense}</div>`;
+  cont.appendChild(moneySection);
+
+  // diary
+  if(d){
+    const di = document.createElement('div'); di.style.marginTop='10px'; di.innerHTML = `<div style="font-weight:800">Дневник</div><div class="small" style="white-space:pre-wrap;margin-top:6px">${escapeHtml(d)}</div>`;
+    cont.appendChild(di);
+  }
+
+  // copy
+  el('copyDayBtn').onclick = ()=> openCopyModal(date);
+}
+function closeDayModal(){ el('dayModal').style.display='none'; el('dayModal').setAttribute('aria-hidden','true'); }
+
+// ---------- Copy modal ----------
+function openCopyModal(fromDate){
+  copySource = fromDate;
+  el('copyModal').style.display='flex'; el('copyModal').setAttribute('aria-hidden','false');
+  el('copyFrom').textContent = fromDate;
+  el('copyTo').value = todayISO();
+}
+function closeCopyModal(){ el('copyModal').style.display='none'; el('copyModal').setAttribute('aria-hidden','true'); copySource=null; }
+function doCopy(){
+  const to = el('copyTo').value;
+  const mode = el('copyMode').value;
+  if(!copySource || !to) return alert('Выберите даты');
+  const src = state.items.filter(i=>i.date===copySource);
+  if(src.length===0 && !state.diary[copySource]) return alert('Нет данных для копирования');
+  if(mode==='replace'){ state.items = state.items.filter(i=>i.date!==to); delete state.diary[to]; }
+  for(const it of src){
+    const copy = JSON.parse(JSON.stringify(it)); copy.id = uid(); copy.date = to; copy.created = new Date().toISOString(); state.items.push(copy);
+  }
+  if(state.diary[copySource]){ if(mode==='replace' || !state.diary[to]) state.diary[to] = state.diary[copySource]; }
+  saveState(true,'copy');
+  closeCopyModal();
+  alert(`Скопировано ${src.length} записей в ${to}`);
+}
+
+// ---------- Money modal ----------
+function openMoneyModal(){
+  el('moneyModal').style.display='flex'; el('moneyModal').setAttribute('aria-hidden','false');
+  el('moneyGoal').value = state.money.goal || '';
+  el('moneyCurrent').value = state.money.current || '';
+  el('moneyInvest').value = state.money.invest || '';
+  el('moneySave').value = state.money.save || '';
+  renderTransList();
+  renderMoneyStats();
+}
+function closeMoneyModal(){ el('moneyModal').style.display='none'; el('moneyModal').setAttribute('aria-hidden','true'); }
+function saveMoneySettings(){
+  state.money.goal = Number(el('moneyGoal').value) || 0;
+  state.money.current = Number(el('moneyCurrent').value) || 0;
+  state.money.invest = Number(el('moneyInvest').value) || 0;
+  state.money.save = Number(el('moneySave').value) || 0;
+  saveState(true,'money-save');
+}
+function renderTransList(){
+  const wrap = el('transList'); wrap.innerHTML = '';
+  const list = state.money.transactions || [];
+  if(list.length===0) wrap.innerHTML = '<div class="small">Транзакций нет</div>';
+  for(const t of list.slice(0,200)){
+    const row = document.createElement('div'); row.className='item';
+    const meta = document.createElement('div'); meta.className='meta'; meta.innerHTML = `<div style="font-weight:700">${t.type==='income'?'+':'-'} ${t.amount} · ${t.date}</div><div class="small">${escapeHtml(t.note||'')}</div>`;
+    const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px';
+    const del = document.createElement('button'); del.className='btn ghost'; del.textContent='Удалить'; del.onclick = ()=> { if(confirm('Удалить транзакцию?')) removeTransaction(t.id); };
+    controls.appendChild(del);
+    row.appendChild(meta); row.appendChild(controls); wrap.appendChild(row);
+  }
+}
+function renderMoneyStats(){
+  const today = todayISO();
+  const week = weekStart(today);
+  const monthStart = (new Date(new Date().getFullYear(), new Date().getMonth(),1)).toISOString().slice(0,10);
+  const yearStart = `${new Date().getFullYear()}-01-01`;
+  const sDay = getMoneySummary(today,today), sWeek = getMoneySummary(week,today), sMonth = getMoneySummary(monthStart,today), sYear = getMoneySummary(yearStart,today);
+  el('moneyStats').innerHTML = `Сегодня: +${sDay.income} / -${sDay.expense}<br>Неделя: +${sWeek.income} / -${sWeek.expense}<br>Месяц: +${sMonth.income} / -${sMonth.expense}<br>Год: +${sYear.income} / -${sYear.expense}<br><div style="margin-top:6px">Текущий баланс: ${state.money.current || 0} · Инвест: ${state.money.invest || 0} · Сбережения: ${state.money.save || 0}</div>`;
+  el('moneyTitle').textContent = `Баланс: ${state.money.current || 0}`;
+  el('miniBalance').textContent = state.money.current || 0;
+  el('miniGoal').textContent = state.money.goal || '—';
+}
+function removeTransaction(id){ state.money.transactions = state.money.transactions.filter(t=>t.id!==id); saveState(true,'del-trans'); renderTransList(); renderMoneyStats(); }
+function addTransactionHandler(){
+  const type = el('transType').value; const amount = Number(el('transAmount').value)||0; const date = el('transDate').value||todayISO(); const note = el('transNote').value||'';
+  if(!amount) return alert('Введите сумму');
+  addTransaction({date, type, amount, note});
+  el('transAmount').value=''; el('transNote').value=''; el('transDate').value = todayISO();
+  renderTransList(); renderMoneyStats();
+}
+function addTransaction(payload){
+  state.money.transactions = state.money.transactions || [];
+  const t = { id: uid(), date: payload.date, type: payload.type, amount: Number(payload.amount)||0, note: payload.note||'', created:new Date().toISOString() };
+  state.money.transactions.unshift(t);
+  if(payload.type==='income') state.money.current = Number(state.money.current||0) + Number(payload.amount||0);
+  if(payload.type==='expense') state.money.current = Number(state.money.current||0) - Number(payload.amount||0);
+  saveState(true,'add-trans');
+  return t;
+}
+
+// ---------- Edit record prompt ----------
+function editRecordPrompt(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  const newTitle = prompt('Название', it.title);
+  if(newTitle === null) return;
+  const newPts = prompt('Очки', String(it.pts||0));
+  if(newPts === null) return;
+  const done = confirm('Отметить как выполнено?');
+  try{ updateRecord(id, { title: newTitle, pts: Number(newPts)||0, done }); }catch(e){ alert('Ошибка'); }
+}
+
+// ---------- Undo / reset ----------
+function undo(){
+  if(!state.history || state.history.length===0) return alert('Нет истории');
+  const last = state.history.shift();
+  if(!last) return alert('Нет истории');
+  try{
+    const snap = JSON.parse(last.snapshot);
+    state.tabs = snap.tabs || state.tabs;
+    state.items = snap.items || state.items;
+    state.diary = snap.diary || state.diary;
+    state.money = snap.money || state.money;
+    state.badges = snap.badges || state.badges;
+    state.points = snap.points || state.points;
+    saveState(false,'undo');
+    alert('Восстановлено: ' + (last.note || last.t));
+  }catch(e){ alert('Ошибка восстановления: '+e.message); }
+}
+function resetAll(){
+  if(!confirm('Сбросить все данные? Это необратимо.')) return;
+  state = { tabs: JSON.parse(JSON.stringify(DEFAULT_TABS)), items: [], diary: {}, money:{goal:0,current:0,invest:0,save:0,transactions:[]}, badges:[], points:0, history:[] };
+  saveState(true,'reset');
+}
+
+// ---------- Chart (income) ----------
+let incomeChart = null;
+function renderIncomeChart(){
+  const canvas = el('chartIncome'); if(!canvas) return;
+  const base = new Date(); const monthOffset = 0; base.setMonth(base.getMonth() + monthOffset);
+  const year = base.getFullYear(), month = base.getMonth();
+  const days = new Date(year, month+1, 0).getDate();
+  const labels = [], data = [];
+  for(let d=1; d<=days; d++){
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const s = getMoneySummary(iso,iso); labels.push(String(d)); data.push(s.income);
+  }
+  if(incomeChart) incomeChart.destroy();
+  incomeChart = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data: { labels, datasets:[{ label:'Доход', data, borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,0.12)', fill:true, tension:0.3 }]},
+    options: { responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}} }
+  });
+}
+
+// ---------- Calendar events reload ----------
+function renderCalendarEvents(){
+  if(!calendar) return;
+  calendar.refetchEvents();
+}
+
+// ---------- Render sidebar and badges and counts ----------
+function renderSidebar(){
+  recalcPointsBadges();
+  el('pointsTotal').textContent = state.points || 0;
+  el('sidebarPoints').textContent = state.points || 0;
+  el('sidebarStreak').textContent = state.streak || 0;
+  el('totalCount').textContent = state.items.length || 0;
+  // badges
+  const br = el('badgesRow'); br.innerHTML = '';
+  for(const b of BADGE_RULES){
+    const have = (state.badges || []).includes(b.id);
+    const be = document.createElement('div'); be.className='badge'; be.style.opacity = have?1:0.35; be.textContent = `${have? '🏆':'🔒'} ${b.title} ${b.need?('·'+b.need+'pt'):''}`;
+    br.appendChild(be);
+  }
+  renderMoneyStats();
+  renderIncomeChart();
+  el('historyInfo').textContent = `История: ${state.history?state.history.length:0}`;
+}
+
+// ---------- Render all ----------
+function renderAll(){
+  renderTabs();
+  renderTabContent();
+  renderSidebar();
+  renderCalendarEvents();
+}
+
+// ---------- UI bindings ----------
+function bindUI(){
+  el('todayBtn').onclick = ()=> { calendar.today(); el('calendarTitle').textContent = calendar.view.title; renderIncomeChart(); };
+  el('prevBtn').onclick = ()=> { calendar.prev(); el('calendarTitle').textContent = calendar.view.title; renderIncomeChart(); };
+  el('nextBtn').onclick = ()=> { calendar.next(); el('calendarTitle').textContent = calendar.view.title; renderIncomeChart(); };
+  el('manageTabsBtn').onclick = ()=> manageTabs();
+  el('moneyBtn').onclick = ()=> openMoneyModal();
+  el('closeMoneyBtn').onclick = ()=> closeMoneyModal();
+  el('addTransBtn').onclick = ()=> addTransactionHandler();
+  el('diaryBtn').onclick = ()=> openDiaryModal(selectedDate);
+  el('closeDiaryBtn').onclick = ()=> closeDiaryModal();
+  el('saveDiary').onclick = ()=> { saveDiary(el('diaryDate').textContent, el('diaryText').value); alert('Сохранено'); renderAll(); };
+  el('clearDiary').onclick = ()=> { if(confirm('Очистить запись для даты?')){ el('diaryText').value=''; saveDiary(el('diaryDate').textContent,''); renderAll(); } };
+  el('exportBtn').onclick = ()=> exportJSON();
+  el('importBtn').onclick = ()=> el('fileInput').click();
+  el('fileInput').onchange = (e)=> { const f = e.target.files[0]; if(f) importJSONFile(f); e.target.value=''; };
+  el('undoBtn').onclick = ()=> { if(confirm('Отменить последнее действие?')) undo(); };
+  el('resetBtn').onclick = ()=> resetAll();
+  el('closeDayBtn').onclick = ()=> closeDayModal();
+  el('closeCopy').onclick = ()=> closeCopyModal();
+  el('doCopy').onclick = ()=> doCopy();
+  el('cancelCopy').onclick = ()=> closeCopyModal();
+  el('copyDayBtn').onclick = ()=> openCopyModal(selectedDate);
+  el('closeCopy').onclick = ()=> closeCopyModal();
+  el('copyTo').value = todayISO();
+  el('closeMoneyBtn').onclick = ()=> closeMoneyModal();
+  el('addTransBtn').onclick = ()=> addTransactionHandler();
+  el('copyDayBtn').onclick = ()=> openCopyModal(selectedDate);
+
+  // close modals on background click
+  document.querySelectorAll('.modal').forEach(m=>{
+    m.addEventListener('click', (e)=>{ if(e.target === m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } });
+  });
+
+  // money inputs update
+  el('moneyGoal').onchange = saveMoneySettings;
+  el('moneyCurrent').onchange = saveMoneySettings;
+  el('moneyInvest').onchange = saveMoneySettings;
+  el('moneySave').onchange = saveMoneySettings;
+}
+
+// ---------- Tabs management prompt ----------
+function manageTabs(){
+  const list = state.tabs.map(t=>`${t.id} : ${t.title}`).join('\n');
+  const action = prompt('Управление вкладками:\n' + list + '\n\nКоманды:\nadd — добавить\nrename:<id> — переименовать\nremove:<id> — удалить\n\nВведите команду:');
+  if(!action) return;
+  if(action === 'add'){
+    const id = prompt('ID новой вкладки (латиница, без пробелов)');
+    if(!id) return alert('ID обязателен');
+    if(state.tabs.find(x=>x.id===id)) return alert('ID уже существует');
+    const title = prompt('Название', 'Новая вкладка') || 'Новая вкладка';
+    const color = prompt('Цвет (hex)', '#06b6d4') || '#06b6d4';
+    state.tabs.push({id, title, color, fields:[]});
+    saveState(true,'add-tab'); renderAll(); return;
+  } else if(action.startsWith('rename:')){
+    const id = action.split(':')[1]; const t = state.tabs.find(x=>x.id===id); if(!t) return alert('Не найдено'); const nt = prompt('Новое название', t.title) || t.title; t.title = nt; saveState(true,'rename'); renderAll(); return;
+  } else if(action.startsWith('remove:')){
+    const id = action.split(':')[1]; if(!confirm('Удалить вкладку и все записи?')) return; state.items = state.items.filter(i=>i.tabId!==id); state.tabs = state.tabs.filter(t=>t.id!==id); saveState(true,'remove-tab'); renderAll(); return;
+  } else { alert('Неизвестная команда'); }
+}
+
+// ---------- Diary ----------
+function openDiaryModal(date){
+  selectedDate = date;
+  el('diaryModal').style.display='flex'; el('diaryModal').setAttribute('aria-hidden','false');
+  el('diaryDate').textContent = date;
+  el('diaryText').value = getDiary(date);
+  const wrap = el('diaryList'); wrap.innerHTML=''; const keys = Object.keys(state.diary||{}).sort((a,b)=>b.localeCompare(a));
+  if(keys.length===0) wrap.innerHTML = '<div class="small">Нет записей</div>';
+  for(const k of keys.slice(0,80)){ const row = document.createElement('div'); row.className='item'; const meta=document.createElement('div'); meta.className='meta'; meta.innerHTML=`<div style="font-weight:700">${k}</div><div class="small">${state.diary[k].slice(0,220)}${state.diary[k].length>220?'…':''}</div>`; const controls=document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px'; const openBtn=document.createElement('button'); openBtn.className='btn ghost'; openBtn.textContent='Открыть'; openBtn.onclick = ()=>{ el('diaryDate').textContent=k; el('diaryText').value = state.diary[k]; }; controls.appendChild(openBtn); row.appendChild(meta); row.appendChild(controls); wrap.appendChild(row); }
+}
+function closeDiaryModal(){ el('diaryModal').style.display='none'; el('diaryModal').setAttribute('aria-hidden','true'); }
+
+// ---------- Init ----------
+function init(){
+  loadState();
+  initCalendar();
+  bindUI();
+  renderAll();
+  // small defaults
+  el('transDate').value = todayISO();
+  // render once more
+  setTimeout(()=> { renderAll(); }, 300);
+  // autosave
+  setInterval(()=> saveState(false,'autosave'), 1000*60*2);
+}
+
+init();
+
+</script>
+</body>
+</html>
+
+Безопасно отправлено с Check Point Capsule Workspace
